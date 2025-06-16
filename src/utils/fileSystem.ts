@@ -8,6 +8,7 @@ export interface FileItem {
     type: 'file' | 'folder';
     children?: FileItem[];
     content?: string;
+    size?: number; // Optional size property for GitLab files
 }
 
 // Get the docs directory path relative to the project root

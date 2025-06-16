@@ -6,10 +6,13 @@ import Sidebar from '@/components/Sidebar';
 import Editor from '@/components/Editor';
 import GitLabPanel from '@/components/GitLabPanel';
 import { FileItem } from '@/utils/fileSystem';
+import { FileText, Code } from 'lucide-react';
 
 export default function Home() {
-  const [files, setFiles] = useState<FileItem[]>([]);
+  const [docsFiles, setDocsFiles] = useState<FileItem[]>([]);
+  const [codebaseFiles, setCodebaseFiles] = useState<FileItem[]>([]);
   const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
+  const [activeTab, setActiveTab] = useState<'docs' | 'codebase'>('docs');
   const [gitlabFiles, setGitlabFiles] = useState<FileItem[]>([]);
   const [isGitlabConnected, setIsGitlabConnected] = useState(false);
   const [gitlabRepo, setGitlabRepo] = useState('');
@@ -17,32 +20,90 @@ export default function Home() {
 
   // Load files from the docs folder
   useEffect(() => {
-    loadDocsFiles();
+    loadAllFiles();
   }, []);
 
-  const loadDocsFiles = async () => {
+  const loadAllFiles = async () => {
     try {
       setIsLoading(true);
       const response = await fetch('/api/docs/files');
       if (response.ok) {
-        const docsFiles = await response.json();
-        setFiles(docsFiles);
+        const allFiles = await response.json();
 
-        // Auto-select README.md if it exists
-        const readme = findFileByName(docsFiles, 'README.md');
+        // Separate documentation files from codebase files
+        const { docs, codebase } = separateFilesByType(allFiles);
+        setDocsFiles(docs);
+        setCodebaseFiles(codebase);
+
+        // Auto-select README.md if it exists in docs
+        const readme = findFileByName(docs, 'README.md');
         if (readme) {
           await handleFileSelect(readme);
+          setActiveTab('docs');
+        } else {
+          // If no README in docs, try to find any markdown file in docs
+          const firstDoc = findFirstFileOfType(docs, ['.md', '.txt']);
+          if (firstDoc) {
+            await handleFileSelect(firstDoc);
+            setActiveTab('docs');
+          }
         }
       } else {
         console.error('Failed to load docs files');
-        setFiles([]);
+        setDocsFiles([]);
+        setCodebaseFiles([]);
       }
     } catch (error) {
       console.error('Error loading docs files:', error);
-      setFiles([]);
+      setDocsFiles([]);
+      setCodebaseFiles([]);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const separateFilesByType = (files: FileItem[]): { docs: FileItem[], codebase: FileItem[] } => {
+    const docs: FileItem[] = [];
+    const codebase: FileItem[] = [];
+
+    const processFiles = (fileList: FileItem[], targetArray: FileItem[]) => {
+      fileList.forEach(file => {
+        if (file.type === 'folder') {
+          // Check if this is the codebase folder
+          if (file.name === 'codebase') {
+            // Add all contents to codebase
+            if (file.children) {
+              codebase.push(...file.children);
+            }
+          } else {
+            // Regular folder - add to current target with processed children
+            const processedFolder = {
+              ...file,
+              children: file.children ? [] as FileItem[] : undefined
+            };
+
+            if (file.children) {
+              const { docs: childDocs, codebase: childCodebase } = separateFilesByType(file.children);
+              if (childDocs.length > 0) {
+                processedFolder.children = childDocs;
+                targetArray.push(processedFolder);
+              }
+              if (childCodebase.length > 0) {
+                codebase.push(...childCodebase);
+              }
+            } else {
+              targetArray.push(processedFolder);
+            }
+          }
+        } else {
+          // Regular file - add to current target
+          targetArray.push(file);
+        }
+      });
+    };
+
+    processFiles(files, docs);
+    return { docs, codebase };
   };
 
   const findFileByName = (fileList: FileItem[], name: string): FileItem | null => {
@@ -52,6 +113,22 @@ export default function Home() {
       }
       if (file.children) {
         const found = findFileByName(file.children, name);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+
+  const findFirstFileOfType = (fileList: FileItem[], extensions: string[]): FileItem | null => {
+    for (const file of fileList) {
+      if (file.type === 'file') {
+        const ext = '.' + file.name.split('.').pop()?.toLowerCase();
+        if (extensions.includes(ext)) {
+          return file;
+        }
+      }
+      if (file.children) {
+        const found = findFirstFileOfType(file.children, extensions);
         if (found) return found;
       }
     }
@@ -70,6 +147,13 @@ export default function Home() {
           }
         }
         setSelectedFile(file);
+
+        // Switch to appropriate tab based on file location
+        if (file.path.startsWith('codebase/')) {
+          setActiveTab('codebase');
+        } else {
+          setActiveTab('docs');
+        }
       } catch (error) {
         console.error('Error loading file content:', error);
         setSelectedFile(file);
@@ -81,7 +165,8 @@ export default function Home() {
     const newPath = parentPath ? `${parentPath}/${name}` : name;
 
     // Check if file/folder already exists
-    const existingItem = findFileByPath(files, newPath);
+    const allFiles = [...docsFiles, ...codebaseFiles];
+    const existingItem = findFileByPath(allFiles, newPath);
     if (existingItem) {
       alert(`A ${type} with the name "${name}" already exists in this location.`);
       return;
@@ -110,9 +195,14 @@ export default function Home() {
           children: type === 'folder' ? [] : undefined
         };
 
+        // Determine if this should go to docs or codebase
+        const isCodebaseFile = newPath.startsWith('codebase/');
+        const targetFiles = isCodebaseFile ? codebaseFiles : docsFiles;
+        const setTargetFiles = isCodebaseFile ? setCodebaseFiles : setDocsFiles;
+
         // Update files state incrementally instead of reloading
-        setFiles(prevFiles => {
-          if (!parentPath) {
+        setTargetFiles(prevFiles => {
+          if (!parentPath || (isCodebaseFile && parentPath === 'codebase')) {
             // Add to root level
             return [...prevFiles, newItem];
           } else {
@@ -138,7 +228,7 @@ export default function Home() {
           }
         });
 
-        // If it's a file, select it
+        // If it's a file, select it and switch to appropriate tab
         if (type === 'file') {
           await handleFileSelect(newItem);
         }
@@ -174,8 +264,12 @@ export default function Home() {
       });
 
       if (response.ok) {
+        // Determine which file list to update
+        const isCodebaseFile = file.path.startsWith('codebase/');
+        const setTargetFiles = isCodebaseFile ? setCodebaseFiles : setDocsFiles;
+
         // Update files state incrementally instead of reloading
-        setFiles(prevFiles => {
+        setTargetFiles(prevFiles => {
           const removeFileRecursively = (fileList: FileItem[]): FileItem[] => {
             return fileList
               .filter(f => f.path !== file.path)
@@ -204,7 +298,11 @@ export default function Home() {
       const updatedFile = { ...selectedFile, content };
       setSelectedFile(updatedFile);
 
-      // Update the file in the files array
+      // Update the file in the appropriate files array
+      const isCodebaseFile = selectedFile.path.startsWith('codebase/');
+      const targetFiles = isCodebaseFile ? codebaseFiles : docsFiles;
+      const setTargetFiles = isCodebaseFile ? setCodebaseFiles : setDocsFiles;
+
       const updateFiles = (fileList: FileItem[]): FileItem[] => {
         return fileList.map(file => {
           if (file.path === selectedFile.path) {
@@ -219,7 +317,7 @@ export default function Home() {
           return file;
         });
       };
-      setFiles(updateFiles(files));
+      setTargetFiles(updateFiles(targetFiles));
 
       // Auto-save to API
       try {
@@ -240,15 +338,6 @@ export default function Home() {
   const handleGitlabConnect = (repoUrl: string, token: string) => {
     setGitlabRepo(repoUrl);
     setIsGitlabConnected(true);
-
-    // Mock GitLab files converted to FileItem format
-    setGitlabFiles([
-      { id: '1', name: 'src', path: 'src/', type: 'folder' },
-      { id: '2', name: 'README.md', path: 'README.md', type: 'file' },
-      { id: '3', name: 'package.json', path: 'package.json', type: 'file' },
-      { id: '4', name: 'components', path: 'src/components/', type: 'folder' },
-      { id: '5', name: 'utils', path: 'src/utils/', type: 'folder' }
-    ]);
   };
 
   const handleGitlabDisconnect = () => {
@@ -258,17 +347,9 @@ export default function Home() {
   };
 
   const handleGitlabFileImport = (gitlabFile: FileItem) => {
-    // Convert GitLab file to local file
-    const newFile: FileItem = {
-      id: Date.now().toString(),
-      name: gitlabFile.name,
-      path: gitlabFile.name,
-      type: 'file',
-      content: `# ${gitlabFile.name}\n\nImported from GitLab: ${gitlabFile.path}\n\nContent will be loaded here...`
-    };
-
-    setFiles([...files, newFile]);
-    setSelectedFile(newFile);
+    // This is now handled by the new import functionality
+    // Refresh files to show newly imported files
+    loadAllFiles();
   };
 
   if (isLoading) {
@@ -291,19 +372,58 @@ export default function Home() {
       />
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar */}
+        {/* Sidebar with Custom Tabs */}
         <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
-          <Sidebar
-            files={files}
-            selectedFile={selectedFile}
-            onFileSelect={handleFileSelect}
-            onFileCreate={handleFileCreate}
-            onFileDelete={handleFileDelete}
-            onFolderExpand={(folderId) => {
-              // Optional: Add any parent-level folder expansion logic here
-              console.log('Folder expanded:', folderId);
-            }}
-          />
+          {/* Custom Tab Headers */}
+          <div className="flex border-b border-gray-200">
+            <button
+              onClick={() => setActiveTab('docs')}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${activeTab === 'docs'
+                  ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                }`}
+            >
+              <FileText className="h-4 w-4" />
+              Documentation
+            </button>
+            <button
+              onClick={() => setActiveTab('codebase')}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${activeTab === 'codebase'
+                  ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                }`}
+            >
+              <Code className="h-4 w-4" />
+              Codebase
+            </button>
+          </div>
+
+          {/* Tab Content */}
+          <div className="flex-1 overflow-hidden">
+            {activeTab === 'docs' ? (
+              <Sidebar
+                files={docsFiles}
+                selectedFile={selectedFile}
+                onFileSelect={handleFileSelect}
+                onFileCreate={handleFileCreate}
+                onFileDelete={handleFileDelete}
+                onFolderExpand={(folderId) => {
+                  console.log('Docs folder expanded:', folderId);
+                }}
+              />
+            ) : (
+              <Sidebar
+                files={codebaseFiles}
+                selectedFile={selectedFile}
+                onFileSelect={handleFileSelect}
+                onFileCreate={handleFileCreate}
+                onFileDelete={handleFileDelete}
+                onFolderExpand={(folderId) => {
+                  console.log('Codebase folder expanded:', folderId);
+                }}
+              />
+            )}
+          </div>
         </div>
 
         {/* Main Content */}
@@ -322,9 +442,6 @@ export default function Home() {
               onConnect={handleGitlabConnect}
               onDisconnect={handleGitlabDisconnect}
               onImportFile={handleGitlabFileImport}
-              isConnected={isGitlabConnected}
-              files={gitlabFiles}
-              isLoading={false}
             />
           </div>
         </div>
