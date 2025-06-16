@@ -5,18 +5,17 @@ import {
     GitBranch,
     Settings,
     RefreshCw,
-    Download,
     FileText,
     Folder,
     FolderOpen,
-    ExternalLink,
-    Loader2,
     CheckCircle,
     AlertCircle,
     ChevronRight,
     ChevronDown,
     Plus,
-    File
+    File,
+    Download,
+    Loader2
 } from 'lucide-react';
 import { FileItem } from '@/utils/fileSystem';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -48,7 +47,6 @@ export default function GitLabPanel({
     const [connectionError, setConnectionError] = useState<string | null>(null);
     const [files, setFiles] = useState<FileItem[]>([]);
     const [isLoading, setIsLoading] = useState(false);
-    const [isImporting, setIsImporting] = useState<string | null>(null);
     const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
     const [importing, setImporting] = useState(false);
     const [importProgress, setImportProgress] = useState<ImportStatus[]>([]);
@@ -200,27 +198,6 @@ export default function GitLabPanel({
             setConnectionError(err instanceof Error ? err.message : 'An error occurred');
         } finally {
             setIsLoading(false);
-        }
-    };
-
-    const handleFileImport = async (file: FileItem) => {
-        if (file.type !== 'file') return;
-
-        setIsImporting(file.id);
-        try {
-            // Create FileItem with content for backward compatibility
-            const fileWithContent: FileItem = {
-                ...file,
-                content: file.content || ''
-            };
-
-            console.log(`✅ Successfully imported file: ${file.name}`);
-            onImportFile(fileWithContent);
-        } catch (error) {
-            console.error('❌ Failed to import file:', error);
-            setConnectionError(error instanceof Error ? error.message : 'Failed to import file');
-        } finally {
-            setIsImporting(null);
         }
     };
 
@@ -416,11 +393,22 @@ export default function GitLabPanel({
                 setImportProgress([]);
             }, 3000);
         }
+
+        // Trigger file list reload in parent component after import completion
+        if (successCount > 0) {
+            // Create a dummy file item to trigger the callback - the actual reload logic is in the parent
+            const dummyFile: FileItem = {
+                id: 'import-complete',
+                name: 'Import Complete',
+                path: 'import-complete',
+                type: 'file'
+            };
+            onImportFile(dummyFile);
+        }
     };
 
     const renderFileNode = (node: FileItem, depth = 0) => {
         const isExpanded = expandedFolders.has(node.id);
-        const isImportingThis = isImporting === node.id;
 
         return (
             <div key={node.id}>
@@ -466,38 +454,6 @@ export default function GitLabPanel({
                             {Math.round(node.size / 1024)}KB
                         </span>
                     )}
-
-                    {/* Action buttons for files */}
-                    {node.type === 'file' && (
-                        <div className="opacity-0 group-hover:opacity-100 flex items-center space-x-1 transition-opacity duration-150">
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleFileImport(node);
-                                }}
-                                disabled={isImportingThis}
-                                className="p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors disabled:opacity-50"
-                                title="Import file"
-                            >
-                                {isImportingThis ? (
-                                    <Loader2 size={14} className="animate-spin" />
-                                ) : (
-                                    <Download size={14} />
-                                )}
-                            </button>
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    const gitlabUrl = `${repoUrl}/-/blob/main/${node.path}`;
-                                    window.open(gitlabUrl, '_blank');
-                                }}
-                                className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
-                                title="View in GitLab"
-                            >
-                                <ExternalLink size={14} />
-                            </button>
-                        </div>
-                    )}
                 </motion.div>
 
                 {/* Animated folder content */}
@@ -518,16 +474,20 @@ export default function GitLabPanel({
         );
     };
 
-    const getStatusIcon = (status: ImportStatus['status']) => {
+    const getFileStatusIcon = (status: string) => {
         switch (status) {
+            case 'imported':
+                return <CheckCircle className="w-4 h-4 text-green-500" />;
+            case 'error':
+                return <AlertCircle className="w-4 h-4 text-red-500" />;
             case 'pending':
                 return <div className="w-4 h-4 rounded-full border-2 border-gray-300" />;
             case 'importing':
                 return <Loader2 className="w-4 h-4 animate-spin text-blue-500" />;
             case 'success':
                 return <CheckCircle className="w-4 h-4 text-green-500" />;
-            case 'error':
-                return <AlertCircle className="w-4 h-4 text-red-500" />;
+            default:
+                return null;
         }
     };
 
@@ -561,7 +521,7 @@ export default function GitLabPanel({
                             className="border rounded-md p-3 bg-gray-50 mx-4 mt-4"
                         >
                             <div className="flex items-center gap-2 mb-2">
-                                <Download className="h-4 w-4" />
+                                <div className="h-4 w-4" />
                                 <span className="text-sm font-medium">Import Progress</span>
                             </div>
                             <div className="max-h-32 overflow-y-auto space-y-1">
@@ -573,7 +533,7 @@ export default function GitLabPanel({
                                         transition={{ delay: index * 0.05 }}
                                         className="flex items-center gap-2 text-xs"
                                     >
-                                        {getStatusIcon(item.status)}
+                                        {getFileStatusIcon(item.status)}
                                         <span className="flex-1 truncate">{item.fileName}</span>
                                         {item.error && (
                                             <span className="text-red-500 text-xs">{item.error}</span>
@@ -663,11 +623,11 @@ export default function GitLabPanel({
                         <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-2">
                                 <CheckCircle size={16} className="text-green-600" />
-                                <span className="text-sm font-medium text-gray-700">Connected</span>
+                                <span className="text-sm font-medium text-gray-700">GitLab Connected</span>
                             </div>
                             <button
                                 onClick={handleDisconnect}
-                                className="px-3 py-1 text-sm text-red-700 hover:text-red-800 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+                                className="px-3 py-1 text-sm text-gray-500 hover:text-red-800 bg-gray-100 hover:bg-red-100 rounded-lg transition-colors"
                             >
                                 Disconnect
                             </button>
@@ -676,7 +636,7 @@ export default function GitLabPanel({
                         <div className="flex gap-2">
                             <button
                                 onClick={handleRefresh}
-                                disabled={isLoading || importing}
+                                disabled={isLoading}
                                 className="flex-1 flex items-center justify-center gap-2 p-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
                             >
                                 <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
@@ -687,15 +647,15 @@ export default function GitLabPanel({
                                 disabled={isLoading || importing || files.length === 0}
                                 className="flex-1 flex items-center justify-center gap-2 p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
                             >
-                                <Plus className={`h-4 w-4 ${importing ? 'animate-pulse' : ''}`} />
-                                {importing ? 'Adding...' : 'Add to Docs'}
+                                <Download className={`h-4 w-4 ${importing ? 'animate-pulse' : ''}`} />
+                                {importing ? 'Importing...' : 'Import'}
                             </button>
                         </div>
                     </div>
                 )}
 
                 {/* Footer */}
-                <div className="text-xs text-gray-500 text-center py-2 border-t border-gray-200 bg-gray-50">
+                <div className="text-xs text-gray-500 text-center py-2 border-t border-gray-200 bg-gray-50 h-12">
                     {files.length > 0 && (
                         <span>{countAllFiles(files)} files available</span>
                     )}

@@ -165,7 +165,7 @@ export default function Editor({ file, onContentChange }: EditorProps) {
             </div>
 
             {/* Status Bar */}
-            <div className="border-t border-gray-200 bg-gray-50 p-3 h-10">
+            <div className="border-t border-gray-200 bg-gray-50 p-3 h-12">
                 <div className="flex items-center justify-between text-xs text-gray-600">
                     <div className="flex items-center space-x-6">
                         <span>

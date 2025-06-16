@@ -48,7 +48,8 @@ export const readDocsStructure = async (): Promise<FileItem[]> => {
                         type: 'folder',
                         children
                     });
-                } else if (entry.isFile() && entry.name.endsWith('.md')) {
+                } else if (entry.isFile()) {
+                    // Include all file types, not just .md files
                     items.push({
                         id,
                         name: entry.name,
