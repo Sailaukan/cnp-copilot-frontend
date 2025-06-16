@@ -18,6 +18,10 @@ export default function Home() {
   const [gitlabRepo, setGitlabRepo] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
+  // Panel visibility state
+  const [isSidebarVisible, setIsSidebarVisible] = useState(true);
+  const [isGitLabPanelVisible, setIsGitLabPanelVisible] = useState(true);
+
   // Load files from the docs folder
   useEffect(() => {
     loadAllFiles();
@@ -352,6 +356,15 @@ export default function Home() {
     loadAllFiles();
   };
 
+  // Toggle functions for panels
+  const toggleSidebar = () => {
+    setIsSidebarVisible(!isSidebarVisible);
+  };
+
+  const toggleGitLabPanel = () => {
+    setIsGitLabPanelVisible(!isGitLabPanelVisible);
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -369,61 +382,68 @@ export default function Home() {
         gitlabConnected={isGitlabConnected}
         currentBranch={gitlabRepo ? 'main' : undefined}
         onFileSelect={handleFileSelect}
+        isSidebarVisible={isSidebarVisible}
+        isGitLabPanelVisible={isGitLabPanelVisible}
+        onToggleSidebar={toggleSidebar}
+        onToggleGitLabPanel={toggleGitLabPanel}
       />
 
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar with Custom Tabs */}
-        <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
-          {/* Custom Tab Headers */}
-          <div className="flex border-b border-gray-200">
-            <button
-              onClick={() => setActiveTab('docs')}
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${activeTab === 'docs'
-                  ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
-                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                }`}
-            >
-              <FileText className="h-4 w-4" />
-              Documentation
-            </button>
-            <button
-              onClick={() => setActiveTab('codebase')}
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${activeTab === 'codebase'
-                  ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
-                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                }`}
-            >
-              <Code className="h-4 w-4" />
-              Codebase
-            </button>
-          </div>
+        <div className={`bg-white border-r border-gray-200 flex flex-col transition-all duration-300 ease-in-out ${isSidebarVisible ? 'w-80' : 'w-0'
+          } ${isSidebarVisible ? 'opacity-100' : 'opacity-0 overflow-hidden'}`}>
+          {isSidebarVisible && (
+            <>
+              {/* Custom Tab Headers */}
+              <div className="flex border-b border-gray-200 h-14">
+                <button
+                  onClick={() => setActiveTab('docs')}
+                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${activeTab === 'docs'
+                    ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                    }`}
+                >
+                  Documentation
+                </button>
+                <button
+                  onClick={() => setActiveTab('codebase')}
+                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${activeTab === 'codebase'
+                    ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                    }`}
+                >
+                  Codebase
+                </button>
+              </div>
 
-          {/* Tab Content */}
-          <div className="flex-1 overflow-hidden">
-            {activeTab === 'docs' ? (
-              <Sidebar
-                files={docsFiles}
-                selectedFile={selectedFile}
-                onFileSelect={handleFileSelect}
-                onFileCreate={handleFileCreate}
-                onFileDelete={handleFileDelete}
-                onFolderExpand={(folderId) => {
-                  console.log('Docs folder expanded:', folderId);
-                }}
-              />
-            ) : (
-              <Sidebar
-                files={codebaseFiles}
-                selectedFile={selectedFile}
-                onFileSelect={handleFileSelect}
-                onFileCreate={handleFileCreate}
-                onFileDelete={handleFileDelete}
-                onFolderExpand={(folderId) => {
-                  console.log('Codebase folder expanded:', folderId);
-                }}
-              />
-            )}
-          </div>
+              {/* Tab Content */}
+              <div className="flex-1 overflow-hidden">
+                {activeTab === 'docs' ? (
+                  <Sidebar
+                    files={docsFiles}
+                    selectedFile={selectedFile}
+                    onFileSelect={handleFileSelect}
+                    onFileCreate={handleFileCreate}
+                    onFileDelete={handleFileDelete}
+                    onFolderExpand={(folderId) => {
+                      console.log('Docs folder expanded:', folderId);
+                    }}
+                  />
+                ) : (
+                  <Sidebar
+                    files={codebaseFiles}
+                    selectedFile={selectedFile}
+                    onFileSelect={handleFileSelect}
+                    onFileCreate={handleFileCreate}
+                    onFileDelete={handleFileDelete}
+                    onFolderExpand={(folderId) => {
+                      console.log('Codebase folder expanded:', folderId);
+                    }}
+                  />
+                )}
+              </div>
+            </>
+          )}
         </div>
 
         {/* Main Content */}
@@ -437,12 +457,16 @@ export default function Home() {
           </div>
 
           {/* GitLab Panel */}
-          <div className="w-80 bg-white border-l border-gray-200">
-            <GitLabPanel
-              onConnect={handleGitlabConnect}
-              onDisconnect={handleGitlabDisconnect}
-              onImportFile={handleGitlabFileImport}
-            />
+          <div className={`bg-white border-l border-gray-200 transition-all duration-300 ease-in-out ${isGitLabPanelVisible ? 'w-80' : 'w-0'
+            } ${isGitLabPanelVisible ? 'opacity-100' : 'opacity-0 overflow-hidden'}`}>
+            {isGitLabPanelVisible && (
+              <GitLabPanel
+                onConnect={handleGitlabConnect}
+                onDisconnect={handleGitlabDisconnect}
+                onImportFile={handleGitlabFileImport}
+                onTogglePanel={toggleGitLabPanel}
+              />
+            )}
           </div>
         </div>
       </div>

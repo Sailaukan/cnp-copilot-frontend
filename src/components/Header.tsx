@@ -1,6 +1,6 @@
 'use client';
 
-import { GitBranch, Settings, User, Bell, Search } from 'lucide-react';
+import { GitBranch, Settings, User, Bell, Search, PanelLeft, PanelRight } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import SearchResults from './SearchResults';
 import { FileItem } from '@/utils/fileSystem';
@@ -10,13 +10,21 @@ interface HeaderProps {
     currentBranch?: string;
     onSettingsClick?: () => void;
     onFileSelect?: (file: FileItem) => void;
+    isSidebarVisible?: boolean;
+    isGitLabPanelVisible?: boolean;
+    onToggleSidebar?: () => void;
+    onToggleGitLabPanel?: () => void;
 }
 
 export default function Header({
     gitlabConnected = false,
     currentBranch,
     onSettingsClick,
-    onFileSelect
+    onFileSelect,
+    isSidebarVisible = true,
+    isGitLabPanelVisible = true,
+    onToggleSidebar,
+    onToggleGitLabPanel
 }: HeaderProps) {
     const [searchQuery, setSearchQuery] = useState('');
     const [showSearchResults, setShowSearchResults] = useState(false);
@@ -50,6 +58,18 @@ export default function Header({
                 setShowSearchResults(true);
             }
 
+            // Ctrl/Cmd + B to toggle sidebar
+            if ((event.ctrlKey || event.metaKey) && event.key === 'b') {
+                event.preventDefault();
+                onToggleSidebar?.();
+            }
+
+            // Ctrl/Cmd + G to toggle GitLab panel
+            if ((event.ctrlKey || event.metaKey) && event.key === 'g') {
+                event.preventDefault();
+                onToggleGitLabPanel?.();
+            }
+
             // Escape to close search results
             if (event.key === 'Escape' && showSearchResults) {
                 setShowSearchResults(false);
@@ -59,7 +79,7 @@ export default function Header({
 
         document.addEventListener('keydown', handleKeyDown);
         return () => document.removeEventListener('keydown', handleKeyDown);
-    }, [showSearchResults]);
+    }, [showSearchResults, onToggleSidebar, onToggleGitLabPanel]);
 
     const handleSettingsClick = () => {
         if (onSettingsClick) {
@@ -151,19 +171,27 @@ export default function Header({
                     />
                 </div>
 
-                {/* Actions */}
-                <div className="flex items-center space-x-3">
-                    <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
-                        <Bell size={20} />
+                {/* Panel Toggle Buttons */}
+                <div className="flex items-center space-x-2 mx-4">
+                    <button
+                        onClick={onToggleSidebar}
+                        className={`p-2 rounded-lg transition-colors ${isSidebarVisible
+                                ? 'text-blue-600 bg-blue-50 hover:bg-blue-100'
+                                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                            }`}
+                        title={`${isSidebarVisible ? 'Hide' : 'Show'} Sidebar (Ctrl+B)`}
+                    >
+                        <PanelLeft size={20} />
                     </button>
                     <button
-                        onClick={handleSettingsClick}
-                        className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                        onClick={onToggleGitLabPanel}
+                        className={`p-2 rounded-lg transition-colors ${isGitLabPanelVisible
+                                ? 'text-blue-600 bg-blue-50 hover:bg-blue-100'
+                                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                            }`}
+                        title={`${isGitLabPanelVisible ? 'Hide' : 'Show'} GitLab Panel (Ctrl+G)`}
                     >
-                        <Settings size={20} />
-                    </button>
-                    <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
-                        <User size={20} />
+                        <PanelRight size={20} />
                     </button>
                 </div>
             </div>

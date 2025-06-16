@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Save, Eye, Loader2 } from 'lucide-react';
+import { Save, Loader2, Bot } from 'lucide-react';
 import { FileItem } from '@/utils/fileSystem';
+import AIChatModal from './AIChatModal';
 
 interface EditorProps {
     file: FileItem | null;
@@ -10,12 +11,16 @@ interface EditorProps {
 }
 
 export default function Editor({ file, onContentChange }: EditorProps) {
-    const [isPreview, setIsPreview] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [cursorPosition, setCursorPosition] = useState({ line: 1, column: 1 });
+    const [lastSavedContent, setLastSavedContent] = useState('');
+    const [isAIChatOpen, setIsAIChatOpen] = useState(false);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     const content = file?.content || '';
+
+    // Check if current file is a markdown file
+    const isMarkdownFile = file?.name.toLowerCase().endsWith('.md') || false;
 
     // Calculate editor statistics
     const getEditorStats = () => {
@@ -52,6 +57,27 @@ export default function Editor({ file, onContentChange }: EditorProps) {
         updateCursorPosition();
     }, [content]);
 
+    // Initialize last saved content when file changes
+    useEffect(() => {
+        if (file) {
+            setLastSavedContent(file.content || '');
+        }
+    }, [file]);
+
+    // Autosave functionality - save every 2 minutes
+    useEffect(() => {
+        if (!file) return;
+
+        const autoSaveInterval = setInterval(() => {
+            // Only save if content has changed since last save
+            if (content !== lastSavedContent && content.trim() !== '') {
+                handleSave(true); // Pass true to indicate this is an autosave
+            }
+        }, 2 * 60 * 1000); // 2 minutes in milliseconds
+
+        return () => clearInterval(autoSaveInterval);
+    }, [file, content, lastSavedContent]);
+
     const handleContentChange = (newContent: string) => {
         onContentChange(newContent);
     };
@@ -64,7 +90,7 @@ export default function Editor({ file, onContentChange }: EditorProps) {
         updateCursorPosition();
     };
 
-    const handleSave = async () => {
+    const handleSave = async (isAutoSave = false) => {
         if (!file) return;
 
         setIsSaving(true);
@@ -81,11 +107,24 @@ export default function Editor({ file, onContentChange }: EditorProps) {
             if (!response.ok) {
                 throw new Error('Failed to save file');
             }
+
+            // Update last saved content on successful save
+            setLastSavedContent(content);
+
+            if (!isAutoSave) {
+                console.log('File saved successfully');
+            } else {
+                console.log('File auto-saved successfully');
+            }
         } catch (error) {
             console.error('Error saving file:', error);
         } finally {
             setIsSaving(false);
         }
+    };
+
+    const handleApplyContent = (newContent: string) => {
+        onContentChange(newContent);
     };
 
     if (!file) {
@@ -103,29 +142,32 @@ export default function Editor({ file, onContentChange }: EditorProps) {
     }
 
     const stats = getEditorStats();
+    const hasUnsavedChanges = content !== lastSavedContent;
 
     return (
         <div className="flex-1 flex flex-col bg-white">
             {/* Header */}
-            <div className="border-b border-gray-200 px-6 py-4 h-16">
+            <div className="border-b border-gray-200 px-4 py-3 h-14">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
-                        <h2 className="text-lg font-semibold text-gray-900">{file.name}</h2>
+                        <h2 className="text-lg font-semibold text-gray-900">
+                            {file.name}
+                            {hasUnsavedChanges && <span className="text-orange-500 ml-1">•</span>}
+                        </h2>
                         <p className="text-sm text-gray-500">{file.path}</p>
                     </div>
                     <div className="flex items-center space-x-3">
+                        {isMarkdownFile && (
+                            <button
+                                onClick={() => setIsAIChatOpen(true)}
+                                className="flex items-center space-x-2 px-4 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm font-medium transition-colors"
+                            >
+                                <Bot size={16} />
+                                <span>Chat with AI</span>
+                            </button>
+                        )}
                         <button
-                            onClick={() => setIsPreview(!isPreview)}
-                            className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${isPreview
-                                ? 'bg-blue-100 text-blue-700'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                }`}
-                        >
-                            <Eye size={16} />
-                            <span>{isPreview ? 'Edit' : 'Preview'}</span>
-                        </button>
-                        <button
-                            onClick={handleSave}
+                            onClick={() => handleSave(false)}
                             disabled={isSaving}
                             className="flex items-center space-x-2 px-4 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
                         >
@@ -140,28 +182,22 @@ export default function Editor({ file, onContentChange }: EditorProps) {
                 </div>
             </div>
 
-            {/* Editor/Preview */}
+            {/* Editor */}
             <div className="flex-1 overflow-hidden">
-                {isPreview ? (
-                    <div className="h-full overflow-y-auto p-6 prose prose-gray max-w-none">
-                        <div dangerouslySetInnerHTML={{ __html: content }} />
-                    </div>
-                ) : (
-                    <textarea
-                        ref={textareaRef}
-                        value={content}
-                        onChange={(e) => handleContentChange(e.target.value)}
-                        onClick={handleTextareaClick}
-                        onKeyUp={handleTextareaKeyUp}
-                        className="w-full h-full p-6 font-mono text-sm resize-none border-0 outline-0 bg-white text-gray-900"
-                        style={{
-                            lineHeight: '1.5',
-                            tabSize: 4,
-                        }}
-                        placeholder="Start writing your documentation..."
-                        spellCheck={false}
-                    />
-                )}
+                <textarea
+                    ref={textareaRef}
+                    value={content}
+                    onChange={(e) => handleContentChange(e.target.value)}
+                    onClick={handleTextareaClick}
+                    onKeyUp={handleTextareaKeyUp}
+                    className="w-full h-full p-6 font-mono text-sm resize-none border-0 outline-0 bg-white text-gray-900"
+                    style={{
+                        lineHeight: '1.5',
+                        tabSize: 4,
+                    }}
+                    placeholder="Start writing your documentation..."
+                    spellCheck={false}
+                />
             </div>
 
             {/* Status Bar */}
@@ -171,6 +207,11 @@ export default function Editor({ file, onContentChange }: EditorProps) {
                         <span>
                             Ln {cursorPosition.line}, Col {cursorPosition.column}
                         </span>
+                        {hasUnsavedChanges && (
+                            <span className="text-orange-600">
+                                Unsaved changes • Auto-saves every 2 minutes
+                            </span>
+                        )}
                     </div>
                     <div className="flex items-center space-x-4">
 
@@ -189,6 +230,17 @@ export default function Editor({ file, onContentChange }: EditorProps) {
                     </div>
                 </div>
             </div>
+
+            {/* AI Chat Modal */}
+            {isMarkdownFile && (
+                <AIChatModal
+                    isOpen={isAIChatOpen}
+                    onClose={() => setIsAIChatOpen(false)}
+                    currentContent={content}
+                    filePath={file.path}
+                    onApplyContent={handleApplyContent}
+                />
+            )}
         </div>
     );
 } 
