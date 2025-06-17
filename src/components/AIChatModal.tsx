@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { X, Send, Bot, User, Loader2, FileText, Edit, Sparkles, CheckCircle, XCircle, File, Folder } from 'lucide-react';
+import { X, Send, Bot, User, Loader2, FileText, Edit, Sparkles, CheckCircle, XCircle, File, Folder, MessageCircle, Zap, Wand2 } from 'lucide-react';
 
 interface Message {
     id: string;
@@ -60,15 +60,16 @@ export default function AIChatModal({
             const welcomeMessage: Message = {
                 id: Date.now().toString(),
                 type: 'ai',
-                content: `Hello! I'm here to help you create comprehensive technical documentation from your codebase. I can:
+                content: `👋 Hello! I'm your AI documentation assistant. I can help you create comprehensive technical documentation from your codebase.
 
-• **Chat** - Answer questions about your document or provide guidance
-• **Edit** - Modify existing documentation based on your instructions  
-• **Generate** - Create new technical documentation from scratch
+**What I can do:**
+• **Chat** - Answer questions and provide guidance
+• **Edit** - Modify existing documentation with precision  
+• **Generate** - Create new documentation from scratch
 
-For edit and generate actions, I will automatically analyze your codebase files to find the most relevant code and use it to create accurate, comprehensive documentation that reflects your actual implementation.
+I'll analyze your codebase files automatically to ensure accurate, comprehensive documentation that reflects your actual implementation.
 
-What kind of documentation would you like to create for "${filePath.split('/').pop()}"?`,
+What would you like to create for **${filePath.split('/').pop()}**?`,
                 timestamp: new Date()
             };
             setMessages([welcomeMessage]);
@@ -160,7 +161,7 @@ What kind of documentation would you like to create for "${filePath.split('/').p
             const errorMessage: Message = {
                 id: (Date.now() + 1).toString(),
                 type: 'ai',
-                content: 'Sorry, I encountered an error while processing your request. Please try again.',
+                content: '⚠️ Sorry, I encountered an error while processing your request. Please try again.',
                 timestamp: new Date()
             };
             setMessages(prev => [...prev, errorMessage]);
@@ -228,7 +229,7 @@ What kind of documentation would you like to create for "${filePath.split('/').p
             const aiMessage: Message = {
                 id: Date.now().toString(),
                 type: 'ai',
-                content: 'No problem! You can either:\n\n1. Manually select different files from the list above\n2. Or I can proceed without analyzing specific code files\n\nWhat would you prefer?',
+                content: '🤔 No problem! You can either:\n\n1. **Manually select** different files from the list above\n2. **Proceed without** analyzing specific code files\n\nWhat would you prefer?',
                 timestamp: new Date()
             };
             setMessages(prev => [...prev, aiMessage]);
@@ -260,196 +261,253 @@ What kind of documentation would you like to create for "${filePath.split('/').p
 
     const getConfidenceColor = (confidence: string) => {
         switch (confidence) {
-            case 'high': return 'text-green-600 bg-green-100';
-            case 'medium': return 'text-yellow-600 bg-yellow-100';
-            case 'low': return 'text-red-600 bg-red-100';
-            default: return 'text-gray-600 bg-gray-100';
+            case 'high': return 'text-emerald-700 bg-emerald-50 border-emerald-200';
+            case 'medium': return 'text-amber-700 bg-amber-50 border-amber-200';
+            case 'low': return 'text-red-700 bg-red-50 border-red-200';
+            default: return 'text-gray-700 bg-gray-50 border-gray-200';
+        }
+    };
+
+    const getActionConfig = (action: string) => {
+        switch (action) {
+            case 'chat':
+                return {
+                    icon: MessageCircle,
+                    label: 'Chat',
+                    description: 'Ask questions and get guidance',
+                    color: 'blue',
+                    gradient: 'from-blue-500 to-blue-600'
+                };
+            case 'edit':
+                return {
+                    icon: Edit,
+                    label: 'Edit',
+                    description: 'Modify existing documentation',
+                    color: 'emerald',
+                    gradient: 'from-emerald-500 to-emerald-600'
+                };
+            case 'generate':
+                return {
+                    icon: Wand2,
+                    label: 'Generate',
+                    description: 'Create new documentation',
+                    color: 'purple',
+                    gradient: 'from-purple-500 to-purple-600'
+                };
+            default:
+                return {
+                    icon: MessageCircle,
+                    label: 'Chat',
+                    description: 'Ask questions and get guidance',
+                    color: 'blue',
+                    gradient: 'from-blue-500 to-blue-600'
+                };
         }
     };
 
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-5xl h-[85vh] flex flex-col">
-                {/* Header */}
-                <div className="flex items-center justify-between p-4 border-b border-gray-200">
-                    <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                            <Bot size={18} className="text-blue-600" />
-                        </div>
-                        <div>
-                            <h2 className="text-lg font-semibold text-gray-900">Chat with AI</h2>
-                            <p className="text-sm text-gray-500">{filePath}</p>
-                        </div>
-                    </div>
-                    <button
-                        onClick={onClose}
-                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                    >
-                        <X size={20} className="text-gray-500" />
-                    </button>
-                </div>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl h-[90vh] flex flex-col overflow-hidden relative">
+                <button
+                    onClick={onClose}
+                    className="absolute top-4 right-4 z-10 p-2 hover:bg-gray-100 rounded-xl transition-colors bg-white shadow-lg"
+                >
+                    <X size={24} className="text-gray-600" />
+                </button>
 
-                {/* Action Selector */}
-                <div className="p-4 border-b border-gray-200 bg-gray-50">
-                    <div className="flex space-x-2 mb-3">
-                        <button
-                            onClick={() => setSelectedAction('chat')}
-                            className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${selectedAction === 'chat'
-                                ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                                : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
-                                }`}
-                        >
-                            <Bot size={16} />
-                            <span>Chat</span>
-                        </button>
-                        <button
-                            onClick={() => setSelectedAction('edit')}
-                            className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${selectedAction === 'edit'
-                                ? 'bg-green-100 text-green-700 border border-green-200'
-                                : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
-                                }`}
-                        >
-                            <Edit size={16} />
-                            <span>Edit</span>
-                        </button>
-                        <button
-                            onClick={() => setSelectedAction('generate')}
-                            className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${selectedAction === 'generate'
-                                ? 'bg-purple-100 text-purple-700 border border-purple-200'
-                                : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
-                                }`}
-                        >
-                            <Sparkles size={16} />
-                            <span>Generate</span>
-                        </button>
+                {/* Quick Actions */}
+                <div className="p-6 bg-gray-50 border-b border-gray-100">
+                    <div className="grid grid-cols-3 gap-4">
+                        {['chat', 'edit', 'generate'].map((action) => {
+                            const config = getActionConfig(action);
+                            const isSelected = selectedAction === action;
+                            const Icon = config.icon;
+
+                            return (
+                                <button
+                                    key={action}
+                                    onClick={() => setSelectedAction(action as any)}
+                                    className={`relative p-4 rounded-xl border-2 transition-all duration-200 group ${isSelected
+                                        ? `border-${config.color}-200 bg-${config.color}-50 shadow-lg shadow-${config.color}-100`
+                                        : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-md'
+                                        }`}
+                                >
+                                    <div className="flex items-center space-x-3">
+                                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isSelected
+                                            ? `bg-gradient-to-r ${config.gradient} text-white shadow-lg`
+                                            : 'bg-gray-100 text-gray-600 group-hover:bg-gray-200'
+                                            }`}>
+                                            <Icon size={20} />
+                                        </div>
+                                        <div className="text-left">
+                                            <div className={`font-semibold ${isSelected ? `text-${config.color}-700` : 'text-gray-700'
+                                                }`}>
+                                                {config.label}
+                                            </div>
+                                            <div className="text-xs text-gray-500 mt-1">
+                                                {config.description}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {isSelected && (
+                                        <div className={`absolute inset-0 rounded-xl bg-gradient-to-r ${config.gradient} opacity-5`} />
+                                    )}
+                                </button>
+                            );
+                        })}
                     </div>
 
                     {selectedFiles.length > 0 && (
-                        <div className="text-sm text-gray-600">
-                            <span className="font-medium">{selectedFiles.length} files selected</span>
-                            <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
-                                Will be used for context
-                            </span>
+                        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <div className="flex items-center space-x-2">
+                                <File size={16} className="text-blue-600" />
+                                <span className="text-sm font-medium text-blue-700">
+                                    {selectedFiles.length} files selected for context
+                                </span>
+                                <div className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
+                                    Active
+                                </div>
+                            </div>
                         </div>
                     )}
                 </div>
 
                 {/* Messages */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50">
                     {messages.map((message) => (
                         <div
                             key={message.id}
                             className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
                         >
-                            <div
-                                className={`max-w-[85%] rounded-lg p-3 ${message.type === 'user'
-                                    ? 'bg-blue-600 text-white'
-                                    : 'bg-gray-100 text-gray-900'
-                                    }`}
-                            >
-                                <div className="flex items-start space-x-2">
-                                    {message.type === 'ai' && (
-                                        <Bot size={16} className="text-blue-600 mt-0.5 flex-shrink-0" />
-                                    )}
-                                    {message.type === 'user' && (
-                                        <User size={16} className="text-white mt-0.5 flex-shrink-0" />
-                                    )}
-                                    <div className="flex-1">
-                                        <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                                            {message.content}
-                                        </div>
+                            <div className={`max-w-[85%] ${message.type === 'user' ? 'order-2' : 'order-1'}`}>
+                                <div className={`rounded-2xl px-5 py-4 shadow-sm ${message.type === 'user'
+                                    ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white ml-12'
+                                    : 'bg-white border border-gray-200 mr-12'
+                                    }`}>
+                                    <div className="flex items-start space-x-3">
+                                        <div className="flex-1 min-w-0">
+                                            <div className={`text-sm leading-relaxed ${message.type === 'user' ? 'text-white' : 'text-gray-800'
+                                                }`}>
+                                                {message.content.split('\n').map((line, i) => (
+                                                    <div key={i} className={line.startsWith('**') && line.endsWith('**') ? 'font-semibold mt-2 mb-1' : ''}>
+                                                        {line.replace(/\*\*(.*?)\*\*/g, '$1')}
+                                                    </div>
+                                                ))}
+                                            </div>
 
-                                        {/* File Analysis Results */}
-                                        {message.fileAnalysis && (
-                                            <div className="mt-3 p-3 bg-white border border-gray-200 rounded-lg">
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">
-                                                        Codebase Analysis
-                                                    </span>
-                                                    <span className={`text-xs px-2 py-1 rounded-full ${getConfidenceColor(message.fileAnalysis.confidence)}`}>
-                                                        {message.fileAnalysis.confidence} confidence
-                                                    </span>
-                                                </div>
+                                            {/* File Analysis Results */}
+                                            {message.fileAnalysis && (
+                                                <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-xl">
+                                                    <div className="flex items-center justify-between mb-3">
+                                                        <div className="flex items-center space-x-2">
+                                                            <Zap size={16} className="text-blue-600" />
+                                                            <span className="text-sm font-semibold text-gray-700">
+                                                                Codebase Analysis
+                                                            </span>
+                                                        </div>
+                                                        <span className={`text-xs px-3 py-1 rounded-full border ${getConfidenceColor(message.fileAnalysis.confidence)}`}>
+                                                            {message.fileAnalysis.confidence} confidence
+                                                        </span>
+                                                    </div>
 
-                                                <div className="mb-3">
-                                                    <p className="text-sm text-gray-700 mb-2">{message.fileAnalysis.reasoning}</p>
-                                                </div>
+                                                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">
+                                                        {message.fileAnalysis.reasoning}
+                                                    </p>
 
-                                                <div className="mb-3">
-                                                    <h4 className="text-sm font-medium text-gray-700 mb-2">Suggested Files ({message.fileAnalysis.relevantFiles.length}):</h4>
-                                                    <div className="space-y-1 max-h-40 overflow-y-auto">
-                                                        {message.fileAnalysis.relevantFiles.map((file, index) => (
-                                                            <div key={index} className="flex items-center space-x-2">
-                                                                <input
-                                                                    type="checkbox"
-                                                                    id={`file-${index}`}
-                                                                    checked={selectedFiles.includes(file)}
-                                                                    onChange={() => toggleFileSelection(file)}
-                                                                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                                                                />
-                                                                <label htmlFor={`file-${index}`} className="flex items-center space-x-1 text-sm text-gray-600 cursor-pointer">
-                                                                    <File size={14} />
-                                                                    <span>{file}</span>
+                                                    <div className="mb-4">
+                                                        <h4 className="text-sm font-semibold text-gray-700 mb-3">
+                                                            📁 Suggested Files ({message.fileAnalysis.relevantFiles.length})
+                                                        </h4>
+                                                        <div className="space-y-2 max-h-40 overflow-y-auto">
+                                                            {message.fileAnalysis.relevantFiles.map((file, index) => (
+                                                                <label
+                                                                    key={index}
+                                                                    className="flex items-center space-x-3 p-2 hover:bg-gray-100 rounded-lg cursor-pointer transition-colors"
+                                                                >
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={selectedFiles.includes(file)}
+                                                                        onChange={() => toggleFileSelection(file)}
+                                                                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 focus:ring-2"
+                                                                    />
+                                                                    <File size={16} className="text-gray-500" />
+                                                                    <span className="text-sm text-gray-700 font-mono">
+                                                                        {file}
+                                                                    </span>
                                                                 </label>
-                                                            </div>
-                                                        ))}
+                                                            ))}
+                                                        </div>
+                                                    </div>
+
+                                                    {message.needsUserConfirmation && showFileConfirmation && (
+                                                        <div className="flex space-x-3">
+                                                            <button
+                                                                onClick={() => handleFileConfirmation(true)}
+                                                                className="flex items-center space-x-2 px-4 py-2 bg-emerald-600 text-white text-sm rounded-lg hover:bg-emerald-700 transition-colors shadow-sm"
+                                                            >
+                                                                <CheckCircle size={16} />
+                                                                <span>Proceed with Selected</span>
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleFileConfirmation(false)}
+                                                                className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white text-sm rounded-lg hover:bg-gray-700 transition-colors shadow-sm"
+                                                            >
+                                                                <XCircle size={16} />
+                                                                <span>Skip Analysis</span>
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {/* Suggested Content */}
+                                            {message.suggestedContent && (
+                                                <div className="mt-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl">
+                                                    <div className="flex items-center justify-between mb-3">
+                                                        <div className="flex items-center space-x-2">
+                                                            <Sparkles size={16} className="text-emerald-600" />
+                                                            <span className="text-sm font-semibold text-emerald-700">
+                                                                ✨ Generated Content
+                                                            </span>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => applyContent(message.suggestedContent!)}
+                                                            className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white text-sm rounded-lg hover:from-emerald-700 hover:to-emerald-800 transition-all shadow-sm"
+                                                        >
+                                                            Apply to Document
+                                                        </button>
+                                                    </div>
+                                                    <div className="bg-white border border-green-200 rounded-lg p-3 max-h-48 overflow-y-auto">
+                                                        <pre className="text-xs text-gray-700 whitespace-pre-wrap font-mono">
+                                                            {message.suggestedContent}
+                                                        </pre>
                                                     </div>
                                                 </div>
-
-                                                {message.needsUserConfirmation && showFileConfirmation && (
-                                                    <div className="flex space-x-2">
-                                                        <button
-                                                            onClick={() => handleFileConfirmation(true)}
-                                                            className="flex items-center space-x-1 px-3 py-1 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 transition-colors"
-                                                        >
-                                                            <CheckCircle size={14} />
-                                                            <span>Proceed with Selected Files</span>
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleFileConfirmation(false)}
-                                                            className="flex items-center space-x-1 px-3 py-1 bg-gray-600 text-white text-sm rounded-md hover:bg-gray-700 transition-colors"
-                                                        >
-                                                            <XCircle size={14} />
-                                                            <span>Skip Files</span>
-                                                        </button>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-
-                                        {/* Suggested Content */}
-                                        {message.suggestedContent && (
-                                            <div className="mt-3 p-3 bg-white border border-gray-200 rounded-lg">
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">
-                                                        Suggested Content
-                                                    </span>
-                                                    <button
-                                                        onClick={() => applyContent(message.suggestedContent!)}
-                                                        className="px-3 py-1 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700 transition-colors"
-                                                    >
-                                                        Apply to Document
-                                                    </button>
-                                                </div>
-                                                <pre className="text-xs text-gray-700 whitespace-pre-wrap font-mono bg-gray-50 p-2 rounded border max-h-40 overflow-y-auto">
-                                                    {message.suggestedContent}
-                                                </pre>
-                                            </div>
-                                        )}
+                                            )}
+                                        </div>
                                     </div>
+                                </div>
+                                <div className={`text-xs text-gray-500 mt-2 ${message.type === 'user' ? 'text-right' : 'text-left ml-11'
+                                    }`}>
+                                    {message.timestamp.toLocaleTimeString()}
                                 </div>
                             </div>
                         </div>
                     ))}
+
                     {isLoading && (
                         <div className="flex justify-start">
-                            <div className="bg-gray-100 rounded-lg p-3">
-                                <div className="flex items-center space-x-2">
-                                    <Bot size={16} className="text-blue-600" />
-                                    <Loader2 size={16} className="animate-spin text-gray-500" />
-                                    <span className="text-sm text-gray-500">AI is thinking...</span>
+                            <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm mr-12">
+                                <div className="flex items-center space-x-3">
+                                    <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                                        <Bot size={16} className="text-white" />
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <Loader2 size={16} className="animate-spin text-blue-600" />
+                                        <span className="text-sm text-gray-600">AI is thinking...</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -458,38 +516,40 @@ What kind of documentation would you like to create for "${filePath.split('/').p
                 </div>
 
                 {/* Input */}
-                <div className="border-t border-gray-200 p-4">
-                    <div className="flex space-x-3">
-                        <textarea
-                            ref={inputRef}
-                            value={inputMessage}
-                            onChange={(e) => setInputMessage(e.target.value)}
-                            onKeyPress={handleKeyPress}
-                            placeholder={selectedAction === 'chat'
-                                ? 'Ask a question about your documentation...'
-                                : selectedAction === 'edit'
-                                    ? 'Describe what you want to update in the documentation...'
-                                    : 'Describe what technical documentation you want to create...'}
-                            className="flex-1 resize-none border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            rows={2}
-                            disabled={isLoading}
-                        />
+                <div className="bg-white border-t border-gray-200 p-6">
+                    <div className="flex space-x-4">
+                        <div className="flex-1">
+                            <textarea
+                                ref={inputRef}
+                                value={inputMessage}
+                                onChange={(e) => setInputMessage(e.target.value)}
+                                onKeyPress={handleKeyPress}
+                                placeholder={selectedAction === 'chat'
+                                    ? '💬 Ask a question about your documentation...'
+                                    : selectedAction === 'edit'
+                                        ? '✏️ Describe what you want to update...'
+                                        : '✨ Describe what documentation you want to create...'}
+                                className="w-full resize-none border-2 border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                rows={3}
+                                disabled={isLoading}
+                            />
+                        </div>
                         <button
                             onClick={() => sendMessage()}
                             disabled={!inputMessage.trim() || isLoading}
-                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center space-x-2"
+                            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center space-x-2 shadow-lg hover:shadow-xl"
                         >
                             {isLoading ? (
-                                <Loader2 size={16} className="animate-spin" />
+                                <Loader2 size={20} className="animate-spin" />
                             ) : (
-                                <Send size={16} />
+                                <Send size={20} />
                             )}
                         </button>
                     </div>
-                    <div className="mt-2 text-xs text-gray-500">
-                        Press Enter to send, Shift+Enter for new line
+                    <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
+                        <span>Press Enter to send • Shift+Enter for new line</span>
                         {(selectedAction === 'edit' || selectedAction === 'generate') && (
-                            <span className="ml-2 text-blue-600">• Will analyze codebase files for accurate documentation</span>
+                            <span className="text-blue-600 font-medium">🔍 Will analyze codebase for context</span>
                         )}
                     </div>
                 </div>
