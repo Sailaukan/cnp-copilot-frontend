@@ -1,36 +1,86 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Docs Copilot
+
+A modern documentation editor with AI assistance and real-time collaboration features.
+
+## Features
+
+### 📝 Split-Screen Editor
+
+- **Side-by-side markdown preview**: Real-time preview alongside your editor
+- **Resizable panels**: Drag the divider to adjust editor/preview ratio
+- **Layout presets**: Quick access to common layouts (50/50, 60/40, 70/30)
+- **Fullscreen mode**: Distraction-free editing experience
+- **Collapsible sections**: Hide/show preview panel as needed
+
+### ⌨️ Keyboard Shortcuts
+
+- `⌘⇧P` (Mac) / `Ctrl⇧P` (Windows/Linux): Toggle preview panel
+- `⌘⇧F` (Mac) / `Ctrl⇧F` (Windows/Linux): Toggle fullscreen mode
+- `⌘⇧R` (Mac) / `Ctrl⇧R` (Windows/Linux): Reset layout to default
+- `Esc`: Exit fullscreen mode
+
+### 🎨 Layout Options
+
+- **50/50 Split**: Balanced view for editing and previewing
+- **60/40 Split**: Editor-focused layout for heavy writing
+- **70/30 Split**: Writing mode with minimal preview
+- **Editor Only**: Full-width editor without preview
+- **Custom Resize**: Drag the divider to any position (20-80% range)
+
+### 🤖 AI Integration
+
+- AI-powered content suggestions
+- Context-aware editing assistance
+- Smart formatting and structure recommendations
+
+### 💾 Auto-Save
+
+- Automatic saving every 2 minutes
+- Visual indicators for unsaved changes
+- Manual save with keyboard shortcuts
 
 ## Getting Started
 
-First, run the development server:
+1. Clone the repository
+2. Install dependencies: `npm install`
+3. Start the development server: `npm run dev`
+4. Open your browser to `http://localhost:3000`
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Usage
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+1. **Select a file** from the sidebar to start editing
+2. **Toggle preview** using the eye icon or `⌘⇧P`
+3. **Resize panels** by dragging the divider between editor and preview
+4. **Use layout presets** via the settings icon for quick layout changes
+5. **Enter fullscreen** for distraction-free editing
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Architecture
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The split-screen editor is built with:
 
-## Learn More
+- **React hooks** for state management
+- **Custom layout hook** (`useEditorLayout`) for reusable layout logic
+- **Local storage persistence** for layout preferences
+- **Responsive design** that adapts to different screen sizes
+- **TypeScript** for type safety and better development experience
 
-To learn more about Next.js, take a look at the following resources:
+## Customization
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Layout preferences are automatically saved to local storage and restored on next visit. The editor supports:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Custom panel widths (20-80% range)
+- Preview visibility preferences
+- Layout mode preferences
+- Fullscreen state management
 
-## Deploy on Vercel
+## Contributing
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test the split-screen functionality
+5. Submit a pull request
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## License
+
+MIT License - see LICENSE file for details

@@ -305,6 +305,12 @@ What would you like to create for **${filePath.split('/').pop()}**?`,
         }
     };
 
+    // Extend supported file types
+    const supportedTypes = [
+        '.md', '.mdx', '.txt', '.rst', '.adoc',
+        '.json', '.yaml', '.toml', '.xml'
+    ];
+
     if (!isOpen) return null;
 
     return (
